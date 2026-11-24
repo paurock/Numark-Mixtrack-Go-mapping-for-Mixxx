@@ -953,14 +953,18 @@ NumarkMixtrackGo.browseEncoder = {
             const preferred = NumarkMixtrackGo.lastHeldSamplerDeck;
             const pad = pads[preferred] || pads[preferred === 1 ? 2 : 1];
             if (pad && pad.samplerPadHeld) {
-                // Approx. 24 browse detents change sampler volume by 50%.
-                // This prevents library/preview navigation while a pad is held.
-                if (engine.getValue(pad.samplerGroup, "track_loaded") === 1) {
-                    const volume = engine.getValue(pad.samplerGroup, "volume");
-                    engine.setValue(pad.samplerGroup, "volume",
-                        Math.max(0, Math.min(1, volume + direction * 0.5 / 24)));
-                    pad.samplerEncoderAdjusted = true;
-                }
+                // Use the normalized parameter space of the sampler volume
+                // control to avoid assumptions about its underlying curve.
+                // Approx. 24 browse detents change the fader by 50%.
+                const previous = engine.getParameter(pad.samplerGroup, "volume");
+                const next = Math.max(0, Math.min(1,
+                    previous + direction * 0.5 / 24));
+                engine.setParameter(pad.samplerGroup, "volume", next);
+                const actual = engine.getParameter(pad.samplerGroup, "volume");
+                pad.samplerEncoderAdjusted = true;
+                console.log("Mixtrack Go Sampler Volume: " + pad.samplerGroup +
+                    " old=" + previous + " target=" + next +
+                    " actual=" + actual);
                 return;
             }
             const shifted = this.leftShiftHeld ||
