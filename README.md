@@ -74,9 +74,9 @@ Available user settings:
        - this delay should be long enough for the lightshow termination to finish.
 
 
-### Sampler volume via held pad + Filter/Low
+### Sampler volume: held pad + browse encoder
 
-In Sampler mode, **hold a pad and turn that deck's Filter/Low knob**, without Shift, to change the selected sampler's volume. Left pads correspond to Samplers 1–4, right pads to Samplers 5–8. A full physical knob sweep changes volume by about 50 percentage points (0–100% limits). The first knob event establishes a baseline to prevent sudden changes. Holding a pad for one second still stops that sampler; releasing after volume adjustment does not retrigger it. Without a held sampler pad, Filter/Low behaves normally.
+In Sampler mode, hold a pad and turn the **central library browse encoder** (no Shift) to change that sampler's volume. Left pads control Samplers 1–4; right pads control Samplers 5–8. Each encoder tick changes volume by roughly 2.1 percentage points (24 ticks ≈ 50 percentage points), clamped to 0–100%. While a pad is held, the encoder does not navigate the library or preview. Holding the pad for one second still stops that sampler. Releasing it after a volume adjustment does not retrigger it. Filter/Low, jogs and other controls keep their original behavior.
 
 ### Configurable Play/Pause fade
 
