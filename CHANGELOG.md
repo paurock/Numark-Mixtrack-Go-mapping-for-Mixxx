@@ -3,6 +3,7 @@
 All items describe changes in the `enhanced` branch relative to the upstream-derived `main` branch. This is a review candidate, **not a tested public release**.
 
 ## Added
+- Sampler mode: hold any pad and rotate that deck's jog wheel to adjust its individual sampler volume (approximately 50 percentage points per revolution). Pad release after adjustment has no playback side effects; normal short-trigger and hold-to-stop remain available.
 - Configurable main-deck Play/Pause volume fades (0.0–10.0 s in 0.1 s steps; default 1.5 s), shared by both decks, with reverse-on-repress behavior. Zero duration disables the fade.
 - Library Preview Deck controls from browse encoder: toggle on press, seek ~8% per detent while previewing, and navigate when stopped.
 - Shift + browse encoder: focus toggle and accelerated library navigation.
