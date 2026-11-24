@@ -74,6 +74,10 @@ Available user settings:
        - this delay should be long enough for the lightshow termination to finish.
 
 
+### Sampler volume via held pad + Filter/Low
+
+In Sampler mode, **hold a pad and turn that deck's Filter/Low knob**, without Shift, to change the selected sampler's volume. Left pads correspond to Samplers 1–4, right pads to Samplers 5–8. A full physical knob sweep changes volume by about 50 percentage points (0–100% limits). The first knob event establishes a baseline to prevent sudden changes. Holding a pad for one second still stops that sampler; releasing after volume adjustment does not retrigger it. Without a held sampler pad, Filter/Low behaves normally.
+
 ### Configurable Play/Pause fade
 
 Under **Mapping Settings → Play/Pause Fade**, set `Play/Pause Fade Duration (seconds)` from **0.0 to 10.0** in **0.1 s** steps (default **1.5 s**). The setting applies to both decks for fade-in and fade-out; **0.0** disables fading. Reload the mapping after applying changes.
