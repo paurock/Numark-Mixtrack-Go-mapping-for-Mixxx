@@ -13,6 +13,7 @@ All items describe changes in the `enhanced` branch relative to the upstream-der
 - Optional Auto Next independently available on Deck 1 and Deck 2: detect natural track completion, wait a shared configurable 0–30 seconds (default 3), then advance the active library selection and load/play the next track on the deck that finished; both disabled by default.
 
 ## Fixed
+- Auto Next skips automatically loading and starting another track when the opposite deck is already playing a loaded track at the end of the configured delay.
 - Auto Next now accepts boolean, numeric and string forms of enabled mapping settings, and detects end-of-track stops even if Mixxx resets the playhead to the beginning. Adds concise diagnostic console logging.
 
 ## Changed
