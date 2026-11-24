@@ -805,6 +805,16 @@ NumarkMixtrackGo.autoNext = {
                             " cancelled due to state change");
                         return;
                     }
+                    const otherGroup = deck.deckNumber === 1 ?
+                        "[Channel2]" : "[Channel1]";
+                    if (engine.getValue(otherGroup, "track_loaded") === 1 &&
+                        engine.getValue(otherGroup, "play") === 1) {
+                        console.log("Mixtrack Go Auto Next: deck " + deck.deckNumber +
+                            " skipped because the other deck is playing");
+                        deck.wasPlaying = false;
+                        return;
+                    }
+
                     deck.wasPlaying = false;
                     console.log("Mixtrack Go Auto Next: loading next library track on deck " +
                         deck.deckNumber);
