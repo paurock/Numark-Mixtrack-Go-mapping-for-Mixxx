@@ -2026,10 +2026,9 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                                 if (!button.samplerPadHeld || currentPadMode !== 3) {
                                     return;
                                 }
+                                // Wait for release to stop: turning the jog at any
+                                // point during the hold switches to volume adjustment.
                                 button.samplerHoldHandled = true;
-                                if (engine.getValue(button.samplerGroup, "play") === 1) {
-                                    script.triggerControl(button.samplerGroup, "stop");
-                                }
                             }, true);
                             break;
                         }
@@ -2049,7 +2048,11 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             engine.stopTimer(this.samplerHoldTimer);
                             this.samplerHoldTimer = 0;
                         }
-                        if (!heldLongEnough && !volumeAdjusted &&
+                        if (heldLongEnough && !volumeAdjusted) {
+                            if (engine.getValue(this.samplerGroup, "play") === 1) {
+                                script.triggerControl(this.samplerGroup, "stop");
+                            }
+                        } else if (!volumeAdjusted &&
                             engine.getValue(this.samplerGroup, "track_loaded") === 1) {
                             engine.setValue(this.samplerGroup, "start_play", 1);
                             script.triggerControl(this.samplerGroup, "beatsync");
