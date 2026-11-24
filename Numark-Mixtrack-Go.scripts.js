@@ -1148,6 +1148,8 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
     const padModesNumber = padModes.length;
     let currentPadMode = 0;
     let isStemsTrackLoaded = false;
+    let heldSamplerPad = null;
+    let lastSamplerKnobValue = null;
 
     // Configurable fade on the main deck Play/Pause buttons.
     // The volume fader is temporarily automated; after Pause its prior value
@@ -1579,6 +1581,10 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                     currentPadMode = 0;
                 }
 
+                if (currentPadMode !== 3) {
+                    heldSamplerPad = null;
+                    lastSamplerKnobValue = null;
+                }
                 switch (currentPadMode) {
                 case 0: { // hotcue
                     NumarkMixtrackGo.led.setModeStemsDim(deckIndex);
@@ -1725,6 +1731,25 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
     });
     this.filterLowPot = new components.Pot({
         input: function(_channel, _control, value) {
+            if (currentPadMode === 3 && heldSamplerPad &&
+                heldSamplerPad.samplerPadHeld) {
+                // Absolute Filter/Low knob: first event establishes its
+                // position; a full physical sweep changes volume by 50%.
+                if (lastSamplerKnobValue !== null) {
+                    const delta = value - lastSamplerKnobValue;
+                    const samplerGroup = heldSamplerPad.samplerGroup;
+                    if (engine.getValue(samplerGroup, "track_loaded") === 1 &&
+                        delta !== 0) {
+                        const volume = engine.getValue(samplerGroup, "volume");
+                        engine.setValue(samplerGroup, "volume",
+                            Math.max(0, Math.min(1, volume + delta * 0.5 / 127)));
+                        heldSamplerPad.samplerKnobAdjusted = true;
+                    }
+                }
+                lastSamplerKnobValue = value;
+                return;
+            }
+            lastSamplerKnobValue = null;
             const newValue = Math.round(script.absoluteLin(value, 0, 1, 0, 127) * 100) / 100;
 
             if (filterLowSwitch === 0) {
@@ -1880,6 +1905,7 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
             samplerPadHeld: false,
             samplerHoldHandled: false,
             samplerHoldTimer: 0,
+            samplerKnobAdjusted: false,
             stemGroup: `[Channel${deckNumber}_Stem${(i+1)}]`,
 
             input: function(_channel, control, value) {
@@ -1975,6 +2001,9 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             }
                             this.samplerPadHeld = true;
                             this.samplerHoldHandled = false;
+                            this.samplerKnobAdjusted = false;
+                            heldSamplerPad = this;
+                            lastSamplerKnobValue = null;
                             const button = this;
                             this.samplerHoldTimer = engine.beginTimer(1000, function() {
                                 button.samplerHoldTimer = 0;
@@ -1993,13 +2022,19 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             break;
                         }
                         const heldLongEnough = this.samplerHoldHandled;
+                        const adjusted = this.samplerKnobAdjusted;
                         this.samplerPadHeld = false;
                         this.samplerHoldHandled = false;
+                        this.samplerKnobAdjusted = false;
+                        if (heldSamplerPad === this) {
+                            heldSamplerPad = null;
+                            lastSamplerKnobValue = null;
+                        }
                         if (this.samplerHoldTimer) {
                             engine.stopTimer(this.samplerHoldTimer);
                             this.samplerHoldTimer = 0;
                         }
-                        if (!heldLongEnough &&
+                        if (!heldLongEnough && !adjusted &&
                             engine.getValue(this.samplerGroup, "track_loaded") === 1) {
                             engine.setValue(this.samplerGroup, "start_play", 1);
                             script.triggerControl(this.samplerGroup, "beatsync");
