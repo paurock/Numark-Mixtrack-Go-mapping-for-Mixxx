@@ -35,7 +35,7 @@ Do not mix a JavaScript file from `enhanced` with the XML from `main` or upstrea
 | Main Play/Pause, either deck | Configurable fade-in before normal playback level and fade-out before pausing (default 1.5 s) |
 | Play/Pause pressed again mid-fade | Reverse fade direction |
 | Shift + jog | Fast seek approximately 0.75 s per tick |
-| Sampler mode: hold pad + turn Filter/Low | Adjust that pad's sampler volume (full knob travel ≈ 50 percentage points); no Shift required |
+| Sampler mode: hold pad + rotate browse encoder | Adjust the held pad's sampler volume. Around 24 encoder ticks change volume by 50 percentage points; playlist navigation is suspended while a pad is held |
 | LOAD short press | Load selected track when the button is released |
 | LOAD hold ≥1 s | Eject loaded track, only when the deck is stopped |
 | Channel headphone/PFL | Standard headphone monitoring; no Shift+PFL eject |
@@ -53,7 +53,7 @@ Do not mix a JavaScript file from `enhanced` with the XML from `main` or upstrea
 | Hotcue | Set or jump to four independent hotcues; Shift + pad clears a hotcue |
 | Loops | Toggle loop lengths selected under **Mapping Settings → Loops** |
 | FX | Pad 1 Echo; Pad 2 Flanger; Pad 3 Reverb; Pad 4 one-beat Beat Roll. These effects are **momentary**: hold to use, release to disable |
-| Sampler | Eight independent sampler slots: left pads 1–4 trigger Samplers 1–4; right pads 1–4 trigger Samplers 5–8. Short press/release restarts the sample and applies one-shot Beat Sync; hold for ≥1 s stops playback without unloading. While a pad is held, turning its deck's Filter/Low knob adjusts only that sampler's volume, with no Shift required. After adjustment, releasing the pad does not retrigger it; Shift + pad does nothing |
+| Sampler | Eight independent sampler slots: left pads 1–4 trigger Samplers 1–4; right pads 1–4 trigger Samplers 5–8. Short press/release restarts the sample and applies one-shot Beat Sync; hold for ≥1 s stops playback without unloading. Hold a pad and turn the main browse encoder to adjust only that sampler's volume (about 50 percentage points per 24 ticks); releasing after an adjustment does not retrigger. Shift + pad does nothing |
 | Stems | Toggle mute for Drums, Bass, Synths, Vocals (requires a compatible stems track and Mixxx 2.6+) |
 
 FX Pads 1–3 load their default effects when the corresponding effect slot is empty; an effect already loaded in that slot is reused. The Beat Roll pad is not a fourth configurable effect slot.
