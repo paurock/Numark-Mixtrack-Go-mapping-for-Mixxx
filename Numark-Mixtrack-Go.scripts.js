@@ -1148,8 +1148,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
     const padModesNumber = padModes.length;
     let currentPadMode = 0;
     let isStemsTrackLoaded = false;
-    let activeSamplerVolumePad = null;
-    let lastSamplerVolumeKnob = null;
 
     // Configurable fade on the main deck Play/Pause buttons.
     // The volume fader is temporarily automated; after Pause its prior value
@@ -1581,10 +1579,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                     currentPadMode = 0;
                 }
 
-                if (currentPadMode !== 3) {
-                    activeSamplerVolumePad = null;
-                    lastSamplerVolumeKnob = null;
-                }
                 switch (currentPadMode) {
                 case 0: { // hotcue
                     NumarkMixtrackGo.led.setModeStemsDim(deckIndex);
@@ -1731,23 +1725,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
     });
     this.filterLowPot = new components.Pot({
         input: function(_channel, _control, value) {
-            if (currentPadMode === 3 && activeSamplerVolumePad) {
-                // The physical Filter/Low pot is absolute (0..127). Treat
-                // movement as relative to prevent jumps in sampler volume.
-                // A full knob sweep changes volume by 50 percentage points.
-                if (lastSamplerVolumeKnob !== null) {
-                    const delta = value - lastSamplerVolumeKnob;
-                    const samplerGroup = activeSamplerVolumePad.samplerGroup;
-                    if (engine.getValue(samplerGroup, "track_loaded") === 1) {
-                        const volume = engine.getValue(samplerGroup, "volume");
-                        engine.setValue(samplerGroup, "volume",
-                            Math.max(0, Math.min(1, volume + delta * 0.5 / 127)));
-                    }
-                }
-                lastSamplerVolumeKnob = value;
-                return;
-            }
-            lastSamplerVolumeKnob = null;
             const newValue = Math.round(script.absoluteLin(value, 0, 1, 0, 127) * 100) / 100;
 
             if (filterLowSwitch === 0) {
@@ -1985,22 +1962,11 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                         }
                     }
                     break;
-                case 3: // Sampler: Shift + Pad selects volume; normal Pad plays/stops.
+                case 3: // sampler: short Pad retriggers + Beat Sync; long Pad stops
                     {
-                        const shiftedPad = control === (0x1C + this.padNumber - 1);
                         const normalPad = control === (0x14 + this.padNumber - 1);
-                        if (shiftedPad) {
-                            if (value === 127) {
-                                activeSamplerVolumePad = this;
-                                lastSamplerVolumeKnob = null;
-                            } else if (activeSamplerVolumePad === this) {
-                                activeSamplerVolumePad = null;
-                                lastSamplerVolumeKnob = null;
-                            }
-                            break;
-                        }
                         if (!normalPad) {
-                            break;
+                            break; // Shift + Pad has no sampler action
                         }
 
                         if (value === 127) {
@@ -2023,10 +1989,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             break;
                         }
 
-                        if (activeSamplerVolumePad === this) {
-                            activeSamplerVolumePad = null;
-                            lastSamplerVolumeKnob = null;
-                        }
                         if (!this.samplerPadHeld) {
                             break;
                         }
