@@ -74,9 +74,9 @@ Available user settings:
        - this delay should be long enough for the lightshow termination to finish.
 
 
-### Sampler pad + jog volume
+### Shift + sampler pad + Filter/Low volume
 
-In **Sampler** mode, hold a pad and turn that deck's jog wheel to adjust the corresponding sampler volume. Left pads control Samplers 1–4; right pads control Samplers 5–8. Approximately one full jog revolution changes volume by 50 percentage points, clamped to 0–100%. The jog does not bend or scratch the main deck while adjusting. Releasing the pad after an adjustment does not trigger/stop the sampler. A long press without jog movement still stops the sample on release.
+In **Sampler** mode, hold **Shift + a pad** and rotate the same deck's **Filter/Low** knob to adjust the corresponding sampler volume. Left pads control Samplers 1–4; right pads control Samplers 5–8. A full physical knob sweep changes volume by approximately 50 percentage points, clamped to 0–100%, with relative tracking to avoid sudden jumps. The jog wheel retains its normal behavior. Shift + pad by itself does not start or stop the sampler; a normal pad press still retriggers, and a normal long hold stops the sample.
 
 ### Configurable Play/Pause fade
 
