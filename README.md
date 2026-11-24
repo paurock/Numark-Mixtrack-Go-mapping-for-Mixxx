@@ -74,6 +74,10 @@ Available user settings:
        - this delay should be long enough for the lightshow termination to finish.
 
 
+### Sampler pad + jog volume
+
+In **Sampler** mode, hold a pad and turn that deck's jog wheel to adjust the corresponding sampler volume. Left pads control Samplers 1–4; right pads control Samplers 5–8. Approximately one full jog revolution changes volume by 50 percentage points, clamped to 0–100%. The jog does not bend or scratch the main deck while adjusting. Releasing the pad after an adjustment does not trigger/stop the sampler. A long press without jog movement still stops the sample on release.
+
 ### Configurable Play/Pause fade
 
 Under **Mapping Settings → Play/Pause Fade**, set `Play/Pause Fade Duration (seconds)` from **0.0 to 10.0** in **0.1 s** steps (default **1.5 s**). The setting applies to both decks for fade-in and fade-out; **0.0** disables fading. Reload the mapping after applying changes.
