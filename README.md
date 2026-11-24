@@ -80,7 +80,7 @@ Under **Mapping Settings → Play/Pause Fade**, set `Play/Pause Fade Duration (s
 
 ### Optional Auto Next (Decks 1 and 2)
 
-In **Mapping Settings → Auto Next**, enable `Enable Auto Next on Deck 1` and/or `Enable Auto Next on Deck 2`. Each switch independently enables Auto Next for its deck; both are **off by default**. `Auto Next Delay (seconds)` is shared (0–30, default 3). After a track ends naturally, the mapping waits the configured delay, advances the highlighted library selection, then loads and plays the selected track on the same deck. The other deck is unaffected; Auto DJ is not used. Both decks share the library selection, so simultaneous endings may lead to unexpected selection. See the [enhanced guide](ENHANCED_README.md#optional-auto-next-decks-1-and-2) for limitations and testing.
+In **Mapping Settings → Auto Next**, enable `Enable Auto Next on Deck 1` and/or `Enable Auto Next on Deck 2`. Each switch independently enables Auto Next for its deck; both are **off by default**. `Auto Next Delay (seconds)` is shared (0–30, default 3). After a track ends naturally, the mapping waits the configured delay, advances the highlighted library selection, then loads and plays the selected track on the same deck. The other deck is unaffected; if it is playing a loaded track when the delay expires, Auto Next skips the transition. Auto DJ is not used. Both decks share the library selection, so simultaneous endings may lead to unexpected selection. See the [enhanced guide](ENHANCED_README.md#optional-auto-next-decks-1-and-2) for limitations and testing.
 
 ## Controller Layout
 
