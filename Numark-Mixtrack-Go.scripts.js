@@ -909,6 +909,11 @@ const libraryFocusTracks = 3;
 const previewDeckGroup = "[PreviewDeck1]";
 const previewSeekStep = 0.08;
 
+// The browse encoder is shared by both decks. The last held sampler pad
+// determines which sampler receives the encoder's volume adjustments.
+NumarkMixtrackGo.heldSamplerVolumePads = { 1: null, 2: null };
+NumarkMixtrackGo.lastHeldSamplerDeck = 1;
+
 NumarkMixtrackGo.browseEncoder = {
     leftShiftHeld: false,
     pressed: false,
@@ -944,6 +949,20 @@ NumarkMixtrackGo.browseEncoder = {
 
         if (isRotate) {
             const direction = value === 127 ? -1 : 1;
+            const pads = NumarkMixtrackGo.heldSamplerVolumePads;
+            const preferred = NumarkMixtrackGo.lastHeldSamplerDeck;
+            const pad = pads[preferred] || pads[preferred === 1 ? 2 : 1];
+            if (pad && pad.samplerPadHeld) {
+                // Approx. 24 browse detents change sampler volume by 50%.
+                // This prevents library/preview navigation while a pad is held.
+                if (engine.getValue(pad.samplerGroup, "track_loaded") === 1) {
+                    const volume = engine.getValue(pad.samplerGroup, "volume");
+                    engine.setValue(pad.samplerGroup, "volume",
+                        Math.max(0, Math.min(1, volume + direction * 0.5 / 24)));
+                    pad.samplerEncoderAdjusted = true;
+                }
+                return;
+            }
             const shifted = this.leftShiftHeld ||
                 control === controls.browse_encoder_rotate_shift[1];
             if (this.shiftedPushHeld || this.shiftPressHandled) {
@@ -1148,8 +1167,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
     const padModesNumber = padModes.length;
     let currentPadMode = 0;
     let isStemsTrackLoaded = false;
-    let heldSamplerPad = null;
-    let lastSamplerKnobValue = null;
 
     // Configurable fade on the main deck Play/Pause buttons.
     // The volume fader is temporarily automated; after Pause its prior value
@@ -1582,8 +1599,7 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                 }
 
                 if (currentPadMode !== 3) {
-                    heldSamplerPad = null;
-                    lastSamplerKnobValue = null;
+                    NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] = null;
                 }
                 switch (currentPadMode) {
                 case 0: { // hotcue
@@ -1731,25 +1747,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
     });
     this.filterLowPot = new components.Pot({
         input: function(_channel, _control, value) {
-            if (currentPadMode === 3 && heldSamplerPad &&
-                heldSamplerPad.samplerPadHeld) {
-                // Absolute Filter/Low knob: first event establishes its
-                // position; a full physical sweep changes volume by 50%.
-                if (lastSamplerKnobValue !== null) {
-                    const delta = value - lastSamplerKnobValue;
-                    const samplerGroup = heldSamplerPad.samplerGroup;
-                    if (engine.getValue(samplerGroup, "track_loaded") === 1 &&
-                        delta !== 0) {
-                        const volume = engine.getValue(samplerGroup, "volume");
-                        engine.setValue(samplerGroup, "volume",
-                            Math.max(0, Math.min(1, volume + delta * 0.5 / 127)));
-                        heldSamplerPad.samplerKnobAdjusted = true;
-                    }
-                }
-                lastSamplerKnobValue = value;
-                return;
-            }
-            lastSamplerKnobValue = null;
             const newValue = Math.round(script.absoluteLin(value, 0, 1, 0, 127) * 100) / 100;
 
             if (filterLowSwitch === 0) {
@@ -1905,7 +1902,7 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
             samplerPadHeld: false,
             samplerHoldHandled: false,
             samplerHoldTimer: 0,
-            samplerKnobAdjusted: false,
+            samplerEncoderAdjusted: false,
             stemGroup: `[Channel${deckNumber}_Stem${(i+1)}]`,
 
             input: function(_channel, control, value) {
@@ -2001,9 +1998,9 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             }
                             this.samplerPadHeld = true;
                             this.samplerHoldHandled = false;
-                            this.samplerKnobAdjusted = false;
-                            heldSamplerPad = this;
-                            lastSamplerKnobValue = null;
+                            this.samplerEncoderAdjusted = false;
+                            NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] = this;
+                            NumarkMixtrackGo.lastHeldSamplerDeck = deckNumber;
                             const button = this;
                             this.samplerHoldTimer = engine.beginTimer(1000, function() {
                                 button.samplerHoldTimer = 0;
@@ -2022,19 +2019,18 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             break;
                         }
                         const heldLongEnough = this.samplerHoldHandled;
-                        const adjusted = this.samplerKnobAdjusted;
+                        const encoderAdjusted = this.samplerEncoderAdjusted;
                         this.samplerPadHeld = false;
                         this.samplerHoldHandled = false;
-                        this.samplerKnobAdjusted = false;
-                        if (heldSamplerPad === this) {
-                            heldSamplerPad = null;
-                            lastSamplerKnobValue = null;
+                        this.samplerEncoderAdjusted = false;
+                        if (NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] === this) {
+                            NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] = null;
                         }
                         if (this.samplerHoldTimer) {
                             engine.stopTimer(this.samplerHoldTimer);
                             this.samplerHoldTimer = 0;
                         }
-                        if (!heldLongEnough && !adjusted &&
+                        if (!heldLongEnough && !encoderAdjusted &&
                             engine.getValue(this.samplerGroup, "track_loaded") === 1) {
                             engine.setValue(this.samplerGroup, "start_play", 1);
                             script.triggerControl(this.samplerGroup, "beatsync");
