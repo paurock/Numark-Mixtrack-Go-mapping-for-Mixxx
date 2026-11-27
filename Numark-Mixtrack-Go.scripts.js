@@ -1089,10 +1089,10 @@ const fadeFxBothPlaying = () =>
     engine.getValue("[Channel2]", "play") !== 0;
 
 function fadeFxValues(position, movingLeft) {
-    // A short entry ramp avoids a jump from neutral at the departure edge.
-    const progress = movingLeft ? 127 - position : position;
-    const attack = 8;
-    const depth = progress <= attack ? progress / attack : (127 - progress) / (127 - attack);
+    // Gentle at both edges, strongest near the midpoint.
+    const progress = position / 127;
+    const maxDepth = 0.7;
+    const depth = maxDepth * Math.pow(Math.sin(Math.PI * progress), 2);
     const low = 0.5 - depth * 0.5;
     const high = 0.5 + depth * 0.5;
     return movingLeft ? [low, high] : [high, low];
