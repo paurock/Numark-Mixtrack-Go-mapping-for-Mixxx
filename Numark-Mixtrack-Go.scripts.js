@@ -1125,7 +1125,7 @@ NumarkMixtrackGo.filterLowSwitcher = new components.Button({
                 engine.softTakeoverIgnoreNextValue("[EqualizerRack1_[Channel2]_Effect1]", "parameter1");
             } else {
                 filterLowSwitch = 0;
-                // Fade FX owns the filters until it is disabled.
+                // Reset hardware pickup only when soft takeover is enabled.
                 if (!isFadeFxOn) {
                     engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel1]]", "super1");
                     engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel2]]", "super1");
@@ -1732,7 +1732,7 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                 // Filter - since this will use QuickEffectRack1, the effect is whatever the user has set
                 // Setting the filter programmatically is a bad idea because whatever is set, if it's parameters where modified,
                 // they'd be reset if filter was set programmatically and the sound could change drastically.
-                if (!isFadeFxOn) engine.setValue(`[QuickEffectRack1_[Channel${deckNumber}]]`, "super1", newValue);
+                engine.setValue(`[QuickEffectRack1_[Channel${deckNumber}]]`, "super1", newValue);
             } else {
                 // Low
                 // warning [Main] "EffectParameter(Low)" WARNING: Value was outside of limits, clamped.
