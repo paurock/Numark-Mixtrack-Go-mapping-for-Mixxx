@@ -1062,6 +1062,28 @@ const setFadeFxFilters = (values) => {
 
 const resetFadeFxFilters = () => setFadeFxFilters([0.5, 0.5]);
 
+// The Quick Effect must be active and fully wet for the manual filter to be audible.
+const enableManualQuickEffect = (group) => {
+    const slot = group.slice(0, -1) + "_Effect1]";
+    if (engine.getValue(group, "enabled") !== 1) engine.setValue(group, "enabled", 1);
+    if (engine.getValue(group, "mix") !== 1) engine.setValue(group, "mix", 1);
+    if (engine.getValue(slot, "loaded") && !engine.getValue(slot, "enabled")) {
+        engine.setValue(slot, "enabled", 1);
+    }
+};
+
+const logManualQuickEffect = (group, value) => {
+    const slot = group.slice(0, -1) + "_Effect1]";
+    console.log("Mixtrack Go Filter/Low: " + group +
+        " MIDI=" + value +
+        " super1=" + engine.getValue(group, "super1") +
+        " enabled=" + engine.getValue(group, "enabled") +
+        " mix=" + engine.getValue(group, "mix") +
+        " preset=" + engine.getValue(group, "loaded_chain_preset") +
+        " slotLoaded=" + engine.getValue(slot, "loaded") +
+        " slotEnabled=" + engine.getValue(slot, "enabled"));
+};
+
 const fadeFxBothPlaying = () =>
     engine.getValue("[Channel1]", "play") !== 0 &&
     engine.getValue("[Channel2]", "play") !== 0;
@@ -1094,12 +1116,13 @@ NumarkMixtrackGo.crossFader = new components.Pot({
         this.lastPosition = value;
         engine.setValue("[Master]", "crossfader", script.absoluteLin(value, -1.0, 1.0, 0, 127));
 
-        if (!isFadeFxOn) return;
+        // Ignore duplicate MIDI reports: a stationary crossfader must not erase
+        // a manual filter adjustment, even at an edge.
+        if (!isFadeFxOn || value === previous) return;
         if (value === 0 || value === 127 || !fadeFxBothPlaying()) {
             resetFadeFxFilters();
             return;
         }
-        if (value === previous) return;
 
         setFadeFxFilters(fadeFxValues(value, value < previous));
     }
@@ -1118,8 +1141,9 @@ NumarkMixtrackGo.filterLowSwitcher = new components.Button({
                 engine.softTakeoverIgnoreNextValue("[EqualizerRack1_[Channel2]_Effect1]", "parameter1");
             } else {
                 filterLowSwitch = 0;
-                // Filter is immediately writable; no pickup after switching from LOW.
+                fadeFxGroups.forEach(enableManualQuickEffect);
             }
+            console.log("Mixtrack Go Filter/Low: mode=" + (filterLowSwitch === 0 ? "FILTER" : "LOW"));
         }
     },
 });
@@ -1714,15 +1738,21 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
         }
     });
     this.filterLowPot = new components.Pot({
+        lastDiagnosticBucket: -1,
         input: function(_channel, _control, value) {
             const newValue = Math.round(script.absoluteLin(value, 0, 1, 0, 127) * 100) / 100;
 
             if (filterLowSwitch === 0) {
-                // Filter - since this will use QuickEffectRack1, the effect is whatever the user has set
-                // Setting the filter programmatically is a bad idea because whatever is set, if it's parameters where modified,
-                // they'd be reset if filter was set programmatically and the sound could change drastically.
-                engine.setValue(`[QuickEffectRack1_[Channel${deckNumber}]]`, "super1", newValue);
+                const effectGroup = `[QuickEffectRack1_[Channel${deckNumber}]]`;
+                enableManualQuickEffect(effectGroup);
+                engine.setValue(effectGroup, "super1", newValue);
+                const bucket = value === 127 ? 5 : value === 0 ? 0 : 1 + Math.floor(value / 32);
+                if (bucket !== this.lastDiagnosticBucket) {
+                    this.lastDiagnosticBucket = bucket;
+                    logManualQuickEffect(effectGroup, value);
+                }
             } else {
+                this.lastDiagnosticBucket = -1;
                 // Low
                 // warning [Main] "EffectParameter(Low)" WARNING: Value was outside of limits, clamped.
                 // getting this warning when script.absoluteLin returns 1
