@@ -74,10 +74,6 @@ Available user settings:
        - this delay should be long enough for the lightshow termination to finish.
 
 
-### Sampler volume: held pad + browse encoder
-
-In Sampler mode, hold a pad and turn the **central library browse encoder** (no Shift) to change that sampler's volume. Left pads control Samplers 1–4; right pads control Samplers 5–8. Each encoder tick changes volume by roughly 2.1 percentage points (24 ticks ≈ 50 percentage points), clamped to 0–100%. While a pad is held, the encoder does not navigate the library or preview. Holding the pad for one second still stops that sampler. Releasing it after a volume adjustment does not retrigger it. Filter/Low, jogs and other controls keep their original behavior.
-
 ### Configurable Play/Pause fade
 
 Under **Mapping Settings → Play/Pause Fade**, set `Play/Pause Fade Duration (seconds)` from **0.0 to 10.0** in **0.1 s** steps (default **1.5 s**). The setting applies to both decks for fade-in and fade-out; **0.0** disables fading. Reload the mapping after applying changes.

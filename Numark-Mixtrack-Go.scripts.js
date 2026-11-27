@@ -897,6 +897,7 @@ NumarkMixtrackGo.autoNext = {
 };
 
 NumarkMixtrackGo.shutdown = function() {
+    if (isFadeFxOn) resetFadeFxFilters();
     NumarkMixtrackGo.autoNext.shutdown();
     NumarkMixtrackGo.led.setAllOff();
     NumarkMixtrackGo.led.setAllShiftOff();
@@ -908,11 +909,6 @@ const libraryFocusSidebar = 2;
 const libraryFocusTracks = 3;
 const previewDeckGroup = "[PreviewDeck1]";
 const previewSeekStep = 0.08;
-
-// The browse encoder is shared by both decks. The last held sampler pad
-// determines which sampler receives the encoder's volume adjustments.
-NumarkMixtrackGo.heldSamplerVolumePads = { 1: null, 2: null };
-NumarkMixtrackGo.lastHeldSamplerDeck = 1;
 
 NumarkMixtrackGo.browseEncoder = {
     leftShiftHeld: false,
@@ -949,24 +945,6 @@ NumarkMixtrackGo.browseEncoder = {
 
         if (isRotate) {
             const direction = value === 127 ? -1 : 1;
-            const pads = NumarkMixtrackGo.heldSamplerVolumePads;
-            const preferred = NumarkMixtrackGo.lastHeldSamplerDeck;
-            const pad = pads[preferred] || pads[preferred === 1 ? 2 : 1];
-            if (pad && pad.samplerPadHeld) {
-                // Use the normalized parameter space of the sampler volume
-                // control to avoid assumptions about its underlying curve.
-                // Approx. 24 browse detents change the fader by 50%.
-                const previous = engine.getParameter(pad.samplerGroup, "volume");
-                const next = Math.max(0, Math.min(1,
-                    previous + direction * 0.5 / 24));
-                engine.setParameter(pad.samplerGroup, "volume", next);
-                const actual = engine.getParameter(pad.samplerGroup, "volume");
-                pad.samplerEncoderAdjusted = true;
-                console.log("Mixtrack Go Sampler Volume: " + pad.samplerGroup +
-                    " old=" + previous + " target=" + next +
-                    " actual=" + actual);
-                return;
-            }
             const shifted = this.leftShiftHeld ||
                 control === controls.browse_encoder_rotate_shift[1];
             if (this.shiftedPushHeld || this.shiftPressHandled) {
@@ -1075,63 +1053,62 @@ NumarkMixtrackGo.fadeFxShift = new components.Button({
         }
     },
 });
+const fadeFxGroups = ["[QuickEffectRack1_[Channel1]]", "[QuickEffectRack1_[Channel2]]"];
+
+const setFadeFxFilters = (values) => {
+    fadeFxGroups.forEach((group, index) => engine.setValue(group, "super1", values[index]));
+};
+
+const resetFadeFxFilters = () => setFadeFxFilters([0.5, 0.5]);
+
+const fadeFxBothPlaying = () =>
+    engine.getValue("[Channel1]", "play") !== 0 &&
+    engine.getValue("[Channel2]", "play") !== 0;
+
+function fadeFxValues(position, movingLeft) {
+    // A short entry ramp avoids a jump from neutral at the departure edge.
+    const progress = movingLeft ? 127 - position : position;
+    const attack = 8;
+    const depth = progress <= attack ? progress / attack : (127 - progress) / (127 - attack);
+    const low = 0.5 - depth * 0.5;
+    const high = 0.5 + depth * 0.5;
+    return movingLeft ? [low, high] : [high, low];
+}
+
 NumarkMixtrackGo.fadeFx = new components.Button({
-    quickEffectRack1Channel1Super1Value: 0,
-    quickEffectRack1Channel2Super1Value: 0,
     input: function(_channel, control, value) {
-        if (control === NumarkMixtrackGo.controls.fadefx[1]) {
-            if (value === 127) {
-                if (isFadeFxOn === false) {
-                    this.quickEffectRack1Channel1Super1Value = engine.getValue("[QuickEffectRack1_[Channel1]]", "super1");
-                    this.quickEffectRack1Channel2Super1Value = engine.getValue("[QuickEffectRack1_[Channel2]]", "super1");
-                    isFadeFxOn = true;
-                } else {
-                    isFadeFxOn = false;
-                    engine.setValue("[QuickEffectRack1_[Channel1]]", "super1", this.quickEffectRack1Channel1Super1Value);
-                    engine.setValue("[QuickEffectRack1_[Channel2]]", "super1", this.quickEffectRack1Channel2Super1Value);
-                }
-            }
+        if (control !== NumarkMixtrackGo.controls.fadefx[1] || value !== 127) return;
+
+        isFadeFxOn = !isFadeFxOn;
+        // Automated filter writes must not be blocked by hardware pickup.
+        fadeFxGroups.forEach(group => engine.softTakeover(group, "super1", false));
+        resetFadeFxFilters();
+        if (!isFadeFxOn) {
+            fadeFxGroups.forEach(group => {
+                engine.softTakeover(group, "super1", true);
+                engine.softTakeoverIgnoreNextValue(group, "super1");
+            });
         }
     },
 });
 
-// should eventually be reviewed to get at least a better fader curve and/or
-// implement a better solution than using quick effects
-NumarkMixtrackGo.crossFader = new components.Pot({//TODO
+NumarkMixtrackGo.crossFader = new components.Pot({
+    lastPosition: null,
     input: function(_channel, _control, value) {
-        const newValue = script.absoluteLin(value, 0, 1, 0, 100);
-        const invertedValue = script.absoluteLin((127 - value), 0, 1, 0, 100);
+        const previous = this.lastPosition === null
+            ? Math.round((engine.getValue("[Master]", "crossfader") + 1) * 127 / 2)
+            : this.lastPosition;
+        this.lastPosition = value;
+        engine.setValue("[Master]", "crossfader", script.absoluteLin(value, -1.0, 1.0, 0, 127));
 
-        if (isFadeFxOn) {
-            if (value === 127) {
-                engine.setValue("[QuickEffectRack1_[Channel1]]", "super1", 0);
-            }
-            if (value === 0) {
-                engine.setValue("[QuickEffectRack1_[Channel2]]", "super1", 0);
-            }
-
-            if (value < 63) {
-                engine.setValue("[Master]", "crossfader", script.absoluteLin(value, -1.0, 0, 23, 63));
-            } else { // tracks get cut at about 10% past midpoint
-                engine.setValue("[Master]", "crossfader", script.absoluteLin(value, 0, 1, 63, 103));
-            }
-
-            const channel1Super1StoredValue = engine.getValue("[QuickEffectRack1_[Channel1]]", "super1");
-            const channel1ValueChange = channel1Super1StoredValue - newValue;
-            //takeover at 5% distance
-            if ((channel1ValueChange < 0.05 && channel1ValueChange > -0.05)) {
-                engine.setValue("[QuickEffectRack1_[Channel1]]", "super1", newValue);
-            }
-
-            const channel2Super1StoredValue = engine.getValue("[QuickEffectRack1_[Channel2]]", "super1");
-            const channel2ValueChange = channel2Super1StoredValue - invertedValue;
-            //takeover at 5% distance
-            if ((channel2ValueChange < 0.05 && channel2ValueChange > -0.05)) {
-                engine.setValue("[QuickEffectRack1_[Channel2]]", "super1", invertedValue);
-            }
-        } else {
-            engine.setValue("[Master]", "crossfader", script.absoluteLin(value, -1.0, 1.0, 0, 127));
+        if (!isFadeFxOn) return;
+        if (value === 0 || value === 127 || !fadeFxBothPlaying()) {
+            resetFadeFxFilters();
+            return;
         }
+        if (value === previous) return;
+
+        setFadeFxFilters(fadeFxValues(value, value < previous));
     }
 });
 
@@ -1148,9 +1125,11 @@ NumarkMixtrackGo.filterLowSwitcher = new components.Button({
                 engine.softTakeoverIgnoreNextValue("[EqualizerRack1_[Channel2]_Effect1]", "parameter1");
             } else {
                 filterLowSwitch = 0;
-                // without this the softTakeover calls in init() dont work
-                engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel1]]", "super1");
-                engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel2]]", "super1");
+                // Fade FX owns the filters until it is disabled.
+                if (!isFadeFxOn) {
+                    engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel1]]", "super1");
+                    engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel2]]", "super1");
+                }
             }
         }
     },
@@ -1407,8 +1386,7 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
             NumarkMixtrackGo.led.setPlayDim(deckIndex);
             //if play stops and fade fx is on, the effects need to be reset (same on serato)
             if (isFadeFxOn) {
-                engine.setValue("[QuickEffectRack1_[Channel1]]", "super1", 0);
-                engine.setValue("[QuickEffectRack1_[Channel2]]", "super1", 0);
+                resetFadeFxFilters();
             }
         }
     });
@@ -1602,9 +1580,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                     currentPadMode = 0;
                 }
 
-                if (currentPadMode !== 3) {
-                    NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] = null;
-                }
                 switch (currentPadMode) {
                 case 0: { // hotcue
                     NumarkMixtrackGo.led.setModeStemsDim(deckIndex);
@@ -1757,7 +1732,7 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                 // Filter - since this will use QuickEffectRack1, the effect is whatever the user has set
                 // Setting the filter programmatically is a bad idea because whatever is set, if it's parameters where modified,
                 // they'd be reset if filter was set programmatically and the sound could change drastically.
-                engine.setValue(`[QuickEffectRack1_[Channel${deckNumber}]]`, "super1", newValue);
+                if (!isFadeFxOn) engine.setValue(`[QuickEffectRack1_[Channel${deckNumber}]]`, "super1", newValue);
             } else {
                 // Low
                 // warning [Main] "EffectParameter(Low)" WARNING: Value was outside of limits, clamped.
@@ -1906,7 +1881,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
             samplerPadHeld: false,
             samplerHoldHandled: false,
             samplerHoldTimer: 0,
-            samplerEncoderAdjusted: false,
             stemGroup: `[Channel${deckNumber}_Stem${(i+1)}]`,
 
             input: function(_channel, control, value) {
@@ -2002,9 +1976,6 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             }
                             this.samplerPadHeld = true;
                             this.samplerHoldHandled = false;
-                            this.samplerEncoderAdjusted = false;
-                            NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] = this;
-                            NumarkMixtrackGo.lastHeldSamplerDeck = deckNumber;
                             const button = this;
                             this.samplerHoldTimer = engine.beginTimer(1000, function() {
                                 button.samplerHoldTimer = 0;
@@ -2023,18 +1994,13 @@ NumarkMixtrackGo.Deck = function(deckIndex, deckNumber) {
                             break;
                         }
                         const heldLongEnough = this.samplerHoldHandled;
-                        const encoderAdjusted = this.samplerEncoderAdjusted;
                         this.samplerPadHeld = false;
                         this.samplerHoldHandled = false;
-                        this.samplerEncoderAdjusted = false;
-                        if (NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] === this) {
-                            NumarkMixtrackGo.heldSamplerVolumePads[deckNumber] = null;
-                        }
                         if (this.samplerHoldTimer) {
                             engine.stopTimer(this.samplerHoldTimer);
                             this.samplerHoldTimer = 0;
                         }
-                        if (!heldLongEnough && !encoderAdjusted &&
+                        if (!heldLongEnough &&
                             engine.getValue(this.samplerGroup, "track_loaded") === 1) {
                             engine.setValue(this.samplerGroup, "start_play", 1);
                             script.triggerControl(this.samplerGroup, "beatsync");
