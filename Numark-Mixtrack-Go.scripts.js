@@ -714,9 +714,10 @@ NumarkMixtrackGo.init = function() {
         });
     }, true);
 
-    // softTakeovers for the Filter/Low knob switching
-    engine.softTakeover("[QuickEffectRack1_[Channel1]]", "super1", true);
-    engine.softTakeover("[QuickEffectRack1_[Channel2]]", "super1", true);
+    // Fade FX and the manual Filter knobs share super1; keep it writable without pickup.
+    // LOW retains its original soft takeover behavior.
+    engine.softTakeover("[QuickEffectRack1_[Channel1]]", "super1", false);
+    engine.softTakeover("[QuickEffectRack1_[Channel2]]", "super1", false);
     engine.softTakeover("[EqualizerRack1_[Channel1]_Effect1]", "parameter1", true);
     engine.softTakeover("[EqualizerRack1_[Channel2]_Effect1]", "parameter1", true);
 
@@ -1080,15 +1081,7 @@ NumarkMixtrackGo.fadeFx = new components.Button({
         if (control !== NumarkMixtrackGo.controls.fadefx[1] || value !== 127) return;
 
         isFadeFxOn = !isFadeFxOn;
-        // Automated filter writes must not be blocked by hardware pickup.
-        fadeFxGroups.forEach(group => engine.softTakeover(group, "super1", false));
         resetFadeFxFilters();
-        if (!isFadeFxOn) {
-            fadeFxGroups.forEach(group => {
-                engine.softTakeover(group, "super1", true);
-                engine.softTakeoverIgnoreNextValue(group, "super1");
-            });
-        }
     },
 });
 
@@ -1125,11 +1118,7 @@ NumarkMixtrackGo.filterLowSwitcher = new components.Button({
                 engine.softTakeoverIgnoreNextValue("[EqualizerRack1_[Channel2]_Effect1]", "parameter1");
             } else {
                 filterLowSwitch = 0;
-                // Reset hardware pickup only when soft takeover is enabled.
-                if (!isFadeFxOn) {
-                    engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel1]]", "super1");
-                    engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel2]]", "super1");
-                }
+                // Filter is immediately writable; no pickup after switching from LOW.
             }
         }
     },
